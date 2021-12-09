@@ -90,7 +90,6 @@ function App({
     document.body.removeChild(element);
   };
   const loadWorkLogEntries = workLogEntriesFetcher || (async () => {
-    console.log('entries');
     const entries = await fetchWorkLogEntries();
     setWorkLogEntries(entries);
   });
