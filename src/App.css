@@ -22,7 +22,7 @@ body {
 
 #container {
   width: 900px;
-  margin: 0 auto;
+  margin: 2rem auto;
 }
 
 hr {
@@ -36,6 +36,10 @@ h3 {
   margin: 1rem 0 0.2rem;
   padding: 0.2rem 0;
   font-weight: normal;
+}
+
+p {
+  margin: 0.2rem 0;
 }
 
 .time {
