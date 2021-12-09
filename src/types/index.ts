@@ -4,7 +4,7 @@ export type WorkLogEntry = {
   notes: string;
   seconds: number;
   date: Array<number>;
-  dateCreation: Date;
+  dateCreation: string;
 };
 
 export type WorkLogEntries = Array<WorkLogEntry>;

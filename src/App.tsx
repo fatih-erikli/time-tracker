@@ -94,8 +94,9 @@ function App({
     setWorkLogEntries(entries);
   });
   useEffect(() => {
-    if (workLogEntriesFetcher) { workLogEntriesFetcher() };
-  }, [workLogEntriesFetcher]);
+    if (loadWorkLogEntries) { loadWorkLogEntries() };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   useEffect(() => {
     if (isRunning) {
       localStorage.setItem("seconds", seconds);
@@ -125,7 +126,7 @@ function App({
     const date = new Date();
     await createWorkLogEntry({
       key: generateUniqueID(),
-      dateCreation: new Date(),
+      dateCreation: new Date().toJSON(),
       projectName,
       seconds,
       notes,
