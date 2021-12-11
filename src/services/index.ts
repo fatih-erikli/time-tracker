@@ -28,7 +28,6 @@ export const getDatabaseConnection = async(): Promise<IDBDatabase> => {
         console.log('upgradeneeded');
         upgradeHandlers.forEach((_function: any) => _function(request.result));
       });
-      request.addEventListener('onupgradeneeded', () => {console.log('onupgradeneeded on request');});
       request.addEventListener('success', () => {
         resolve(request.result as IDBDatabase);
         _localInstance = request.result;
