@@ -38,6 +38,18 @@ h3 {
   font-weight: normal;
 }
 
+h2 {
+  font-weight: normal;
+  margin: 0;
+  font-size: 1.1em;
+  color: rgb(244, 164, 28);
+}
+
+
+h3 a:hover {
+  color: var(--primary-color);
+}
+
 p {
   margin: 0.2rem 0;
 }
@@ -138,17 +150,44 @@ th {
   font-weight: normal;
 }
 
+.long-hash {
+  width: 10em;
+  display: inline-block;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
 .info {
+  margin: 1rem 0 0;
   color: var(--success-color);
 }
 
 .error {
+  margin: 1rem 0 0;
   color: var(--error-color);
 }
 
 footer {
   padding: 1rem 0 1rem;
 }
+
+a {
+  color: blue;
+}
+
+a:hover {color:black;}
+
+a:visited {
+  color: blue;
+}
+
+h3 a,
+h3 a:visited {
+  color: black;
+  text-decoration: none;
+}
+
 
 @media (max-width: 900px) {
   #container {

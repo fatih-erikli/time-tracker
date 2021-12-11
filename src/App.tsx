@@ -1,34 +1,51 @@
-import { useState, useEffect, ChangeEvent, ChangeEventHandler } from 'react';
+import { useState, useEffect, ChangeEvent, ChangeEventHandler, useMemo } from "react";
 
-import { useLocalStorageState } from './hooks/useLocalStorage';
+import { useLocalStorageState } from "./hooks/useLocalStorage";
 import {
   fetchWorkLogEntries,
   removeIndexDbStore,
   updateWorkLogEntry,
   createWorkLogEntry,
-} from './services/indexed-db';
-import { WorkLogEntries } from './types';
-import { generateUniqueID } from './utils';
+  hashWorkLogEntries,
+} from "./services/work-log";
+import {
+  createLocalShareableURL,
+  deleteLocalShareableURL,
+  fetchLocalShareableUrls,
+  fetchShareableURL,
+  requestShareableURL,
+  updateLocalShareableURL,
+  updateRemoteShareableURL,
+} from "./services/shareable-urls";
+import { Error, ShareableURL, WorkLogEntries } from "./types";
+import { generateUniqueID, isValidUUIDKey } from "./utils";
 
-import Time from './components/Time';
-import DateFilter from './components/DateFilter';
-import Textarea from './components/Textarea';
+import Time from "./components/Time";
+import DateFilter from "./components/DateFilter";
+import Textarea from "./components/Textarea";
 
-import './App.css';
+import "./App.css";
 
 let __timerInstance: NodeJS.Timeout;
 
 type AppProps = {
   workLogEntriesFetcher?: Function;
-}
+  shareableUrlsFetcher?: Function;
+};
 
-function App({
-  workLogEntriesFetcher
-}: AppProps) {
+function App({ workLogEntriesFetcher, shareableUrlsFetcher }: AppProps) {
+  const [isLoading, setIsLoading] = useState(false);
   const [seconds, setSeconds] = useLocalStorageState("seconds", 0, Number);
-  const [isRunning, setIsRunning] = useLocalStorageState("isRunning", false, Boolean);
+  const [isRunning, setIsRunning] = useLocalStorageState(
+    "isRunning",
+    false,
+    Boolean
+  );
   const [projectName, setProjectName] = useLocalStorageState("projectName", "");
   const [workLogEntries, setWorkLogEntries] = useState<WorkLogEntries>([]);
+  const [currentWorkLogEntriesHash, setCurrentWorkLogEntriesHash] = useState<string|null>(null);
+  const [currentLinkKey, setCurrentLinkKey] = useState<string|null>(null);
+  const [shareableUrls, setShareableUrls] = useState<Array<ShareableURL>>([]);
   const [notes, setNotes] = useLocalStorageState("notes", "");
   const [ratePerHour, setRatePerHour] = useLocalStorageState(
     "ratePerHour",
@@ -36,15 +53,21 @@ function App({
     Number
   );
   const [currency, setCurrency] = useLocalStorageState("currency", "USD");
-  const [currentEditingEntry, setCurrentEditingEntry] = useState<string | null>(null);
-  const [currentEditingField, setCurrentEditingField] = useState<string | null>(null);
+  const [currentEditingEntry, setCurrentEditingEntry] = useState<string | null>(
+    null
+  );
+  const [currentEditingField, setCurrentEditingField] = useState<string | null>(
+    null
+  );
   const [showFilterBar, setShowFilterBar] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
+  const [isCreateShareableURLInProgress, setIsCreateShareableURLInProgress] =
+    useState(false);
   const loadFile: ChangeEventHandler = (event: ChangeEvent) => {
     setError(null);
     if (!event.target) {
-      return
+      return;
     }
     const files = (event.target as HTMLInputElement).files;
     if (!files) {
@@ -89,14 +112,30 @@ function App({
     element.click();
     document.body.removeChild(element);
   };
-  const loadWorkLogEntries = workLogEntriesFetcher || (async () => {
-    const entries = await fetchWorkLogEntries();
-    setWorkLogEntries(entries);
-  });
+  const loadWorkLogEntries = useMemo(() => (
+    workLogEntriesFetcher ||
+    (async (linkKey: string) => {
+      setIsLoading(true);
+      if (linkKey) {
+        const remoteShareableURL: ShareableURL = await fetchShareableURL(linkKey);
+        setWorkLogEntries(remoteShareableURL.worklog);
+      } else {
+        const entries = await fetchWorkLogEntries(linkKey);
+        setWorkLogEntries(entries);
+      }
+      setIsLoading(false);
+    })
+  ), [workLogEntriesFetcher]);
+  const loadShareableUrls = useMemo(() => (
+    shareableUrlsFetcher ||
+    (async () => {
+      const shareableUrls = await fetchLocalShareableUrls();
+      setShareableUrls(shareableUrls);
+    })
+  ), [shareableUrlsFetcher]);
   useEffect(() => {
-    if (loadWorkLogEntries) { loadWorkLogEntries() };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    setCurrentWorkLogEntriesHash(hashWorkLogEntries(workLogEntries));
+  }, [workLogEntries]);
   useEffect(() => {
     if (isRunning) {
       localStorage.setItem("seconds", seconds);
@@ -107,8 +146,12 @@ function App({
     if (seconds === 0) {
       localStorage.removeItem("seconds");
     }
-    document.querySelector("link[rel='icon']")?.setAttribute('href',
-      isRunning ? '/favicon-animated.ico' : '/favicon.ico');
+    document
+      .querySelector("link[rel='icon']")
+      ?.setAttribute(
+        "href",
+        isRunning && seconds > 0 ? "favicon-animated.ico" : "favicon.ico"
+      );
   }, [isRunning, seconds]);
   useEffect(() => {
     if (isRunning) {
@@ -141,7 +184,9 @@ function App({
     await loadWorkLogEntries();
   };
   const processLogEntryEdit = async () => {
-    const currentWorkLogEntry = workLogEntries.find((entry) => entry.key === currentEditingEntry);
+    const currentWorkLogEntry = workLogEntries.find(
+      (entry) => entry.key === currentEditingEntry
+    );
     if (currentWorkLogEntry && currentEditingEntry) {
       await updateWorkLogEntry(currentWorkLogEntry, currentEditingEntry);
     }
@@ -155,9 +200,65 @@ function App({
     (left, right) => left + right.seconds,
     0
   );
+  const createShareableURL = async () => {
+    const contentHash = hashWorkLogEntries(workLogEntries);
+    const urlKey = generateUniqueID();
+    setIsCreateShareableURLInProgress(true);
+    const remoteShareableURL: ShareableURL | Error = await requestShareableURL(
+      workLogEntries,
+      contentHash,
+      urlKey
+    );
+    if (remoteShareableURL.isCreated) {
+      createLocalShareableURL(
+        remoteShareableURL.worklog,
+        remoteShareableURL.key,
+        remoteShareableURL.contentHash,
+        remoteShareableURL.dateCreation,
+        remoteShareableURL.dateModification,
+        remoteShareableURL.viewCount
+      );
+    } else {
+      setInfo("A link for the current state of the work log already exists.");
+    }
+    loadShareableUrls();
+    setIsCreateShareableURLInProgress(false);
+  };
+  useEffect(() => {
+    const linkKey = window.location.hash.slice(1);
+    const isValidLinkKey = isValidUUIDKey(linkKey);
+
+    if (isValidLinkKey) {
+      setCurrentLinkKey(linkKey);
+    }
+
+    if (loadWorkLogEntries) {
+      if (isValidLinkKey) {
+        loadWorkLogEntries(linkKey);
+      } else {
+        loadWorkLogEntries();
+      }
+    }
+
+    if (loadShareableUrls) {
+      loadShareableUrls();
+    }
+  }, [loadShareableUrls, loadWorkLogEntries]);
+  const pushChanges = async (urlKey: string) => {
+    const document = await updateRemoteShareableURL(urlKey, workLogEntries, currentWorkLogEntriesHash as string);
+    await updateLocalShareableURL(urlKey, document.contentHash, document.dateModification as string, document.viewCount);
+    loadShareableUrls();
+  };
+  const deleteLink = (urlKey: string) => {
+    deleteLocalShareableURL(urlKey);
+    loadShareableUrls();
+  };
   return (
     <div id="container">
-      <h3 id="logo">Time tracker</h3>
+      <h3 id="logo"><a href="/">Time tracker</a></h3>
+      {currentLinkKey && (
+        <h2>Currently viewing the work log with the key {currentLinkKey}</h2>
+      )}
       <div style={{ display: "flex", justifyContent: "space-between" }}>
         <div style={{}}>
           <label htmlFor={"project-id"}>Project</label>
@@ -214,7 +315,9 @@ function App({
             Reset
           </button>
         )}
-        {seconds > 0 && <button onClick={() => processSaveButton()}>Save</button>}
+        {seconds > 0 && (
+          <button onClick={() => processSaveButton()}>Save</button>
+        )}
       </div>
       <h3>Work log</h3>
       <table>
@@ -223,28 +326,40 @@ function App({
             <th className={"table-header-project"}>Project</th>
             <th className={"table-header-time"}>Time</th>
             <th className={"table-header-date"}>
-              <a href="#filter-bar" onClick={event => {
-                event.preventDefault();
-                setShowFilterBar(!showFilterBar);
-              }}>Date</a>
-              {showFilterBar && (
-                <DateFilter />
-              )}
+              <a
+                href="#filter-bar"
+                onClick={(event) => {
+                  event.preventDefault();
+                  setShowFilterBar(!showFilterBar);
+                }}
+              >
+                Date
+              </a>
+              {showFilterBar && <DateFilter />}
             </th>
             <th className={"table-header-description"}>Description</th>
           </tr>
         </thead>
         <tbody>
-          {workLogEntries.length === 0 && (
+          {isLoading && (
+            <tr>
+            <td colSpan={4}>Loading.</td>
+            </tr>
+          )}
+          {!isLoading && workLogEntries.length === 0 && (
             <tr>
               <td colSpan={4}>No data.</td>
             </tr>
           )}
           {workLogEntries.map((entry) => (
             <tr key={entry.key}>
-              <td style={{
-                verticalAlign: "top",
-              }}>{entry.projectName}</td>
+              <td
+                style={{
+                  verticalAlign: "top",
+                }}
+              >
+                {entry.projectName}
+              </td>
               <td
                 style={{
                   verticalAlign: "top",
@@ -263,8 +378,8 @@ function App({
                 }}
               >
                 {currentEditingEntry &&
-                  currentEditingEntry === entry.key &&
-                  currentEditingField === "date" ? (
+                currentEditingEntry === entry.key &&
+                currentEditingField === "date" ? (
                   <>
                     <div
                       style={{
@@ -280,14 +395,14 @@ function App({
                               workLogEntries.map((entry) =>
                                 entry.key === currentEditingEntry
                                   ? {
-                                    ...entry,
-                                    date: entry.date.map(
-                                      (number, numberIndex) =>
-                                        index === numberIndex
-                                          ? Number(event.target.value)
-                                          : number
-                                    ),
-                                  }
+                                      ...entry,
+                                      date: entry.date.map(
+                                        (number, numberIndex) =>
+                                          index === numberIndex
+                                            ? Number(event.target.value)
+                                            : number
+                                      ),
+                                    }
                                   : entry
                               )
                             );
@@ -309,12 +424,15 @@ function App({
                   </>
                 ) : (
                   (([year, month, day]) => (
-                    <div style={{ display: 'flex', justifyContent: 'space-around' }}>
-                      <span className={'date-separator'}>{year}</span>
-                      /
-                      <span className={'date-separator'}>{month + 1}</span>
-                      /
-                      <span className={'date-separator'}>{day}</span>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-around",
+                      }}
+                    >
+                      <span className={"date-separator"}>{year}</span>/
+                      <span className={"date-separator"}>{month + 1}</span>/
+                      <span className={"date-separator"}>{day}</span>
                     </div>
                   ))(entry.date)
                 )}
@@ -330,8 +448,8 @@ function App({
                 }}
               >
                 {currentEditingEntry &&
-                  currentEditingEntry === entry.key &&
-                  currentEditingField === "notes" ? (
+                currentEditingEntry === entry.key &&
+                currentEditingField === "notes" ? (
                   <div
                     style={{
                       display: "flex",
@@ -358,37 +476,50 @@ function App({
                     </button>
                   </div>
                 ) : (
-                  <div style={{
-                    whiteSpace: 'break-spaces',
-                  }}>{entry.notes}</div>
+                  <div
+                    style={{
+                      whiteSpace: "break-spaces",
+                    }}
+                  >
+                    {entry.notes}
+                  </div>
                 )}
               </td>
             </tr>
           ))}
-          {workLogEntries.length > 0 && (
+          {(
             <>
               <tr className={"total"}>
                 <td>Total</td>
                 <td>
                   <Time seconds={totalSeconds} />
                 </td>
-                <td rowSpan={2} style={{ verticalAlign: 'bottom', textAlign: 'center' }}>
+                <td
+                  rowSpan={2}
+                  style={{ verticalAlign: "bottom", textAlign: "center" }}
+                >
                   Todays date
-                  {(
-                    ((date) => (
-                      <div style={{ display: 'flex', width: '200', justifyContent: 'space-around' }}>
-                        <span className={'date-separator'}>{date.getFullYear()}</span>
-                        /
-                        <span className={'date-separator'}>{date.getMonth() + 1}</span>
-                        /
-                        <span className={'date-separator'}>{date.getDate()}</span>
-                      </div>
-                    ))(new Date())
-                  )}
+                  {((date) => (
+                    <div
+                      style={{
+                        display: "flex",
+                        width: "200",
+                        justifyContent: "space-around",
+                      }}
+                    >
+                      <span className={"date-separator"}>
+                        {date.getFullYear()}
+                      </span>
+                      /
+                      <span className={"date-separator"}>
+                        {date.getMonth() + 1}
+                      </span>
+                      /
+                      <span className={"date-separator"}>{date.getDate()}</span>
+                    </div>
+                  ))(new Date())}
                 </td>
-                <td style={{ verticalAlign: 'top' }}>
-
-                </td>
+                <td style={{ verticalAlign: "top" }}></td>
               </tr>
               <tr className={"total-payment"}>
                 <td></td>
@@ -421,9 +552,11 @@ function App({
                   </div>
                 </td>
                 <td colSpan={1} style={{}}>
-                  Payment in total<div style={{ fontSize: "2rem" }}>
+                  Payment in total
+                  <div style={{ fontSize: "2rem" }}>
                     {Number((totalSeconds / 60 / 60) * ratePerHour).toFixed(2)}
-                    {({ "USD": "$", "EUR": "€", "TL": "TL" })[currency as string]}</div>
+                    {{ USD: "$", EUR: "€", TL: "TL" }[currency as string]}
+                  </div>
                 </td>
               </tr>
             </>
@@ -435,14 +568,60 @@ function App({
         <input onChange={loadFile} type={"file"} />
       </p>
       <h3>Export current database</h3>
-      <p>
-        <button onClick={(event) => {
-          event.preventDefault();
-          exportDatabases()
-        }}>
+      <p
+        style={{
+          display: "flex",
+          gap: 5,
+        }}
+      >
+        <button
+          onClick={(event) => {
+            event.preventDefault();
+            exportDatabases();
+          }}
+        >
           <span>Export</span>
         </button>
+        <button
+          disabled={isCreateShareableURLInProgress}
+          onClick={() => createShareableURL()}
+        >
+          {isCreateShareableURLInProgress
+            ? "Creating a shareable url..."
+            : "Create a shareable URL of database"}
+        </button>
       </p>
+      {shareableUrls.length > 0 && (
+        <table>
+          <thead>
+            <tr>
+              <th style={{ width: '25%' }}>Key</th>
+              <th style={{ width: '25%' }}>Hash</th>
+              <th style={{ width: '25%' }}>Last modification</th>
+              <th style={{ width: '10%' }}>Views</th>
+              <th style={{ width: '15%' }}></th>
+            </tr>
+          </thead>
+          <tbody>
+            {shareableUrls.map((shareableUrl) => (
+              <tr key={shareableUrl.key}>
+                <td><a target="_blank" rel="noreferrer" href={`#${shareableUrl.key}`}>Open link in new window</a></td>
+                <td><span title={shareableUrl.contentHash} className="long-hash">{shareableUrl.contentHash}</span></td>
+                <td>{new Date(shareableUrl.dateModification || shareableUrl.dateCreation).toLocaleString('en-US', { timeZone: 'UTC' })}</td>
+                <td>{shareableUrl.viewCount}</td>
+                <td>
+                  <div style={{display: 'flex', gap: 3}}>
+                  <button disabled={shareableUrl.contentHash === currentWorkLogEntriesHash} onClick={() => pushChanges(shareableUrl.key)} title="Push changes to the shared link">Sync...</button>
+                  <button onClick={() => deleteLink(shareableUrl.key)} title="Delete the current link">Delete</button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      {error && <p className={"error"}>{error}</p>}
+      {info && <p className={"info"}>{info}</p>}
       <h3>Reset current database</h3>
       <p>
         <button
@@ -459,8 +638,6 @@ function App({
           <span>Reset</span>
         </button>
       </p>
-      {error && <p className={"error"}>{error}</p>}
-      {info && <p className={"info"}>{info}</p>}
       <footer>
         Fatih Erikli, MIT Licensed, 2021.
         <br />
