@@ -606,7 +606,11 @@ function App({ workLogEntriesFetcher, shareableUrlsFetcher }: AppProps) {
             {shareableUrls.map((shareableUrl) => (
               <tr key={shareableUrl.key}>
                 <td><a target="_blank" rel="noreferrer" href={`#${shareableUrl.key}`}>Open link in new window</a></td>
-                <td><span title={shareableUrl.contentHash} className="long-hash">{shareableUrl.contentHash}</span></td>
+                <td>
+                  <div style={{display: 'flex', padding: 0}}>
+                  <span title={shareableUrl.contentHash} className="long-hash">{shareableUrl.contentHash}</span>
+                  </div>
+                </td>
                 <td>{new Date(shareableUrl.dateModification || shareableUrl.dateCreation).toLocaleString('en-US', { timeZone: 'UTC' })}</td>
                 <td>{shareableUrl.viewCount}</td>
                 <td>
