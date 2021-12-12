@@ -368,9 +368,35 @@ function App({ workLogEntriesFetcher, shareableUrlsFetcher }: AppProps) {
               <td
                 style={{
                   verticalAlign: "top",
+                  cursor: "pointer"
+                }}
+                onClick={() => {
+                  setCurrentEditingEntry(entry.key);
+                  setCurrentEditingField("projectName");
                 }}
               >
-                {entry.projectName}
+                
+                {currentEditingEntry &&
+                currentEditingEntry === entry.key &&
+                currentEditingField === "projectName" ? <><input
+                  type={'text'}
+                  onChange={(event: ChangeEvent) => {
+                    setWorkLogEntries(
+                      workLogEntries.map((entry) =>
+                        entry.key === currentEditingEntry
+                          ? { ...entry, projectName: (event.target as any).value }
+                          : entry
+                      )
+                    );
+                  }}
+                  value={entry.projectName}
+                />
+                <button
+                  onClick={processLogEntryEdit}
+                  style={{ width: "40%", marginTop: 3 }}
+                >
+                  Save
+                </button></>:entry.projectName}
               </td>
               <td
                 style={{

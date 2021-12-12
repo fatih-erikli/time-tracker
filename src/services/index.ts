@@ -5,7 +5,6 @@ let request: IDBRequest;
 const upgradeHandlers: Array<Function> = [];
 
 export const addUpgradeHandler = (handler: Function) => {
-  console.log('add upgrade handler');
   upgradeHandlers.push(handler);
 }
 

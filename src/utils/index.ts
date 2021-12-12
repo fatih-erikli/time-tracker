@@ -6,7 +6,6 @@ export const promisifyOnSuccess = async (request: IDBRequest) => {
       console.error('error', request.error);
     });
     request.addEventListener('success', (event: Event) => {
-      console.log('success')
       const target = event.target as IDBRequest;
       resolve(target.result);
     });

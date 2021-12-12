@@ -92,10 +92,10 @@ export const requestShareableURL = async (
       retrieveKey = response['existing-document'];
     }
   }
-  response = await fetch(`${SHAREABLE_URL_ENDPOINT}${retrieveKey}`);
-  response = await response.json();
+  response = await fetchShareableURLsMetaData([retrieveKey]);
+  response = response[0];
   return ({
-    worklog: response.worklog,
+    worklog: [],
     key: response.key,
     contentHash: response.contentHash,
     isCreated: retrieveKey === urlKey,
