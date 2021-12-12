@@ -13,6 +13,7 @@ import {
   deleteLocalShareableURL,
   fetchLocalShareableUrls,
   fetchShareableURL,
+  getLocalShareableURL,
   requestShareableURL,
   updateLocalShareableURL,
   updateRemoteShareableURL,
@@ -220,6 +221,17 @@ function App({ workLogEntriesFetcher, shareableUrlsFetcher }: AppProps) {
       );
     } else {
       setInfo("A link for the current state of the work log already exists.");
+      const localShareableUrl = await getLocalShareableURL(remoteShareableURL.key);
+      if (!localShareableUrl) {
+        createLocalShareableURL(
+          remoteShareableURL.worklog,
+          remoteShareableURL.key,
+          remoteShareableURL.contentHash,
+          remoteShareableURL.dateCreation,
+          remoteShareableURL.dateModification,
+          remoteShareableURL.viewCount
+        );
+      }
     }
     loadShareableUrls();
     setIsCreateShareableURLInProgress(false);
