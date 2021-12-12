@@ -57,6 +57,7 @@ p {
 .time {
   display: flex;
   justify-content: space-between;
+  align-items: end;
   gap: 40px;
 }
 
