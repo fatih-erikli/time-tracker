@@ -336,7 +336,7 @@ function App({ workLogEntriesFetcher, shareableUrlsFetcher }: AppProps) {
         <thead>
           <tr>
             <th className={"table-header-project"}>Project</th>
-            <th className={"table-header-time"}>Time</th>
+            <th className={"table-header-time"}>Duration</th>
             <th className={"table-header-date"}>
               <a
                 href="#filter-bar"
