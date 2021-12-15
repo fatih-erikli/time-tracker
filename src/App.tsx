@@ -1,4 +1,10 @@
-import { useState, useEffect, ChangeEvent, ChangeEventHandler, useMemo } from "react";
+import {
+  useState,
+  useEffect,
+  ChangeEvent,
+  ChangeEventHandler,
+  useMemo,
+} from "react";
 
 import { useLocalStorageState } from "./hooks/useLocalStorage";
 import {
@@ -44,8 +50,10 @@ function App({ workLogEntriesFetcher, shareableUrlsFetcher }: AppProps) {
   );
   const [projectName, setProjectName] = useLocalStorageState("projectName", "");
   const [workLogEntries, setWorkLogEntries] = useState<WorkLogEntries>([]);
-  const [currentWorkLogEntriesHash, setCurrentWorkLogEntriesHash] = useState<string|null>(null);
-  const [currentLinkKey, setCurrentLinkKey] = useState<string|null>(null);
+  const [currentWorkLogEntriesHash, setCurrentWorkLogEntriesHash] = useState<
+    string | null
+  >(null);
+  const [currentLinkKey, setCurrentLinkKey] = useState<string | null>(null);
   const [shareableUrls, setShareableUrls] = useState<Array<ShareableURL>>([]);
   const [notes, setNotes] = useLocalStorageState("notes", "");
   const [ratePerHour, setRatePerHour] = useLocalStorageState(
@@ -113,27 +121,33 @@ function App({ workLogEntriesFetcher, shareableUrlsFetcher }: AppProps) {
     element.click();
     document.body.removeChild(element);
   };
-  const loadWorkLogEntries = useMemo(() => (
-    workLogEntriesFetcher ||
-    (async (linkKey: string) => {
-      setIsLoading(true);
-      if (linkKey) {
-        const remoteShareableURL: ShareableURL = await fetchShareableURL(linkKey);
-        setWorkLogEntries(remoteShareableURL.worklog);
-      } else {
-        const entries = await fetchWorkLogEntries(linkKey);
-        setWorkLogEntries(entries);
-      }
-      setIsLoading(false);
-    })
-  ), [workLogEntriesFetcher]);
-  const loadShareableUrls = useMemo(() => (
-    shareableUrlsFetcher ||
-    (async () => {
-      const shareableUrls = await fetchLocalShareableUrls();
-      setShareableUrls(shareableUrls);
-    })
-  ), [shareableUrlsFetcher]);
+  const loadWorkLogEntries = useMemo(
+    () =>
+      workLogEntriesFetcher ||
+      (async (linkKey: string) => {
+        setIsLoading(true);
+        if (linkKey) {
+          const remoteShareableURL: ShareableURL = await fetchShareableURL(
+            linkKey
+          );
+          setWorkLogEntries(remoteShareableURL.worklog);
+        } else {
+          const entries = await fetchWorkLogEntries(linkKey);
+          setWorkLogEntries(entries);
+        }
+        setIsLoading(false);
+      }),
+    [workLogEntriesFetcher]
+  );
+  const loadShareableUrls = useMemo(
+    () =>
+      shareableUrlsFetcher ||
+      (async () => {
+        const shareableUrls = await fetchLocalShareableUrls();
+        setShareableUrls(shareableUrls);
+      }),
+    [shareableUrlsFetcher]
+  );
   useEffect(() => {
     setCurrentWorkLogEntriesHash(hashWorkLogEntries(workLogEntries));
   }, [workLogEntries]);
@@ -221,7 +235,9 @@ function App({ workLogEntriesFetcher, shareableUrlsFetcher }: AppProps) {
       );
     } else {
       setInfo("A link for the current state of the work log already exists.");
-      const localShareableUrl = await getLocalShareableURL(remoteShareableURL.key);
+      const localShareableUrl = await getLocalShareableURL(
+        remoteShareableURL.key
+      );
       if (!localShareableUrl) {
         createLocalShareableURL(
           remoteShareableURL.worklog,
@@ -257,8 +273,17 @@ function App({ workLogEntriesFetcher, shareableUrlsFetcher }: AppProps) {
     }
   }, [loadShareableUrls, loadWorkLogEntries]);
   const pushChanges = async (urlKey: string) => {
-    const document = await updateRemoteShareableURL(urlKey, workLogEntries, currentWorkLogEntriesHash as string);
-    await updateLocalShareableURL(urlKey, document.contentHash, document.dateModification as string, document.viewCount);
+    const document = await updateRemoteShareableURL(
+      urlKey,
+      workLogEntries,
+      currentWorkLogEntriesHash as string
+    );
+    await updateLocalShareableURL(
+      urlKey,
+      document.contentHash,
+      document.dateModification as string,
+      document.viewCount
+    );
     loadShareableUrls();
   };
   const deleteLink = (urlKey: string) => {
@@ -267,7 +292,9 @@ function App({ workLogEntriesFetcher, shareableUrlsFetcher }: AppProps) {
   };
   return (
     <div id="container">
-      <h3 id="logo"><a href="/">Time tracker</a></h3>
+      <h3 id="logo">
+        <a href="/">Time tracker</a>
+      </h3>
       {currentLinkKey && (
         <h2>Currently viewing the work log with the key {currentLinkKey}</h2>
       )}
@@ -340,6 +367,10 @@ function App({ workLogEntriesFetcher, shareableUrlsFetcher }: AppProps) {
             <th className={"table-header-date"}>
               <a
                 href="#filter-bar"
+                style={{
+                  textDecoration: "none",
+                  // date filter is work in progress
+                }}
                 onClick={(event) => {
                   event.preventDefault();
                   setShowFilterBar(!showFilterBar);
@@ -355,7 +386,7 @@ function App({ workLogEntriesFetcher, shareableUrlsFetcher }: AppProps) {
         <tbody>
           {isLoading && (
             <tr>
-            <td colSpan={4}>Loading.</td>
+              <td colSpan={4}>Loading.</td>
             </tr>
           )}
           {!isLoading && workLogEntries.length === 0 && (
@@ -368,35 +399,43 @@ function App({ workLogEntriesFetcher, shareableUrlsFetcher }: AppProps) {
               <td
                 style={{
                   verticalAlign: "top",
-                  cursor: "pointer"
+                  cursor: "pointer",
                 }}
                 onClick={() => {
                   setCurrentEditingEntry(entry.key);
                   setCurrentEditingField("projectName");
                 }}
               >
-                
                 {currentEditingEntry &&
                 currentEditingEntry === entry.key &&
-                currentEditingField === "projectName" ? <><input
-                  type={'text'}
-                  onChange={(event: ChangeEvent) => {
-                    setWorkLogEntries(
-                      workLogEntries.map((entry) =>
-                        entry.key === currentEditingEntry
-                          ? { ...entry, projectName: (event.target as any).value }
-                          : entry
-                      )
-                    );
-                  }}
-                  value={entry.projectName}
-                />
-                <button
-                  onClick={processLogEntryEdit}
-                  style={{ width: "40%", marginTop: 3 }}
-                >
-                  Save
-                </button></>:entry.projectName}
+                currentEditingField === "projectName" ? (
+                  <>
+                    <input
+                      type={"text"}
+                      onChange={(event: ChangeEvent) => {
+                        setWorkLogEntries(
+                          workLogEntries.map((entry) =>
+                            entry.key === currentEditingEntry
+                              ? {
+                                  ...entry,
+                                  projectName: (event.target as any).value,
+                                }
+                              : entry
+                          )
+                        );
+                      }}
+                      value={entry.projectName}
+                    />
+                    <button
+                      onClick={processLogEntryEdit}
+                      style={{ width: "40%", marginTop: 3 }}
+                    >
+                      Save
+                    </button>
+                  </>
+                ) : (
+                  entry.projectName
+                )}
               </td>
               <td
                 style={{
@@ -448,7 +487,7 @@ function App({ workLogEntriesFetcher, shareableUrlsFetcher }: AppProps) {
                           style={{
                             width: index === 0 ? "60%" : "20%",
                           }}
-                          value={number}
+                          value={number + 1}
                           key={index}
                         />
                       ))}
@@ -525,7 +564,7 @@ function App({ workLogEntriesFetcher, shareableUrlsFetcher }: AppProps) {
               </td>
             </tr>
           ))}
-          {(
+          {
             <>
               <tr className={"total"}>
                 <td>Total</td>
@@ -598,7 +637,7 @@ function App({ workLogEntriesFetcher, shareableUrlsFetcher }: AppProps) {
                 </td>
               </tr>
             </>
-          )}
+          }
         </tbody>
       </table>
       <h3>Load a database</h3>
@@ -633,28 +672,58 @@ function App({ workLogEntriesFetcher, shareableUrlsFetcher }: AppProps) {
         <table>
           <thead>
             <tr>
-              <th style={{ width: '25%' }}>Key</th>
-              <th style={{ width: '25%' }}>Hash</th>
-              <th style={{ width: '25%' }}>Last modification</th>
-              <th style={{ width: '10%' }}>Views</th>
-              <th style={{ width: '15%' }}></th>
+              <th style={{ width: "25%" }}>Key</th>
+              <th style={{ width: "25%" }}>Hash</th>
+              <th style={{ width: "25%" }}>Last modification</th>
+              <th style={{ width: "10%" }}>Views</th>
+              <th style={{ width: "15%" }}></th>
             </tr>
           </thead>
           <tbody>
             {shareableUrls.map((shareableUrl) => (
               <tr key={shareableUrl.key}>
-                <td><a target="_blank" rel="noreferrer" href={`#${shareableUrl.key}`}>Open link in new window</a></td>
                 <td>
-                  <div style={{display: 'flex', padding: 0}}>
-                  <span title={shareableUrl.contentHash} className="long-hash">{shareableUrl.contentHash}</span>
+                  <a
+                    target="_blank"
+                    rel="noreferrer"
+                    href={`#${shareableUrl.key}`}
+                  >
+                    Open link in new window
+                  </a>
+                </td>
+                <td>
+                  <div style={{ display: "flex", padding: 0 }}>
+                    <span
+                      title={shareableUrl.contentHash}
+                      className="long-hash"
+                    >
+                      {shareableUrl.contentHash}
+                    </span>
                   </div>
                 </td>
-                <td>{new Date(shareableUrl.dateModification || shareableUrl.dateCreation).toLocaleString('en-US', { timeZone: 'UTC' })}</td>
-                <td>{shareableUrl.viewCount}</td>
                 <td>
-                  <div style={{display: 'flex', gap: 3}}>
-                  <button disabled={shareableUrl.contentHash === currentWorkLogEntriesHash} onClick={() => pushChanges(shareableUrl.key)} title="Push changes to the shared link">Sync...</button>
-                  <button onClick={() => deleteLink(shareableUrl.key)} title="Delete the current link">Delete</button>
+                  {new Date(
+                    shareableUrl.dateModification || shareableUrl.dateCreation
+                  ).toLocaleString("en-US", { timeZone: "UTC" })}
+                </td>
+                <td>{shareableUrl.viewCount || 0}</td>
+                <td>
+                  <div style={{ display: "flex", gap: 3 }}>
+                    <button
+                      disabled={
+                        shareableUrl.contentHash === currentWorkLogEntriesHash
+                      }
+                      onClick={() => pushChanges(shareableUrl.key)}
+                      title="Push changes to the shared link"
+                    >
+                      Sync...
+                    </button>
+                    <button
+                      onClick={() => deleteLink(shareableUrl.key)}
+                      title="Delete the current link"
+                    >
+                      Delete
+                    </button>
                   </div>
                 </td>
               </tr>

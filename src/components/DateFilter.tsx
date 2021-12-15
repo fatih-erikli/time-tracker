@@ -17,11 +17,11 @@ const DateFilter = () => {
       </select>
       <select value={currentMonth} onChange={event => setCurrentMonth(Number(event.target.value))}>
         <option>Month</option>
-        {new Array(11).fill(0).map((_, index) => <option>{currentMonth - index}</option>)}
+        {new Array(11).fill(0).map((_, index) => <option>{index + 1}</option>)}
       </select>
       <select value={currentDay} onChange={event => setCurrentDay(Number(event.target.value))}>
         <option>Day</option>
-        {new Array(30).fill(0).map((_, index) => <option>{currentDay - index}</option>)}
+        {new Array(30).fill(0).map((_, index) => <option>{index + 1}</option>)}
       </select>
     </div>
   );

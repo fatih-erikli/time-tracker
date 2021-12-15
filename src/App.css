@@ -1,28 +1,29 @@
 :root {
-  --primary-color: rgb(6, 92, 242);
+  --primary-color: rgb(29, 47, 250);
   --success-color: rgb(73, 237, 87);
   --error-color: rgb(220, 34, 34);
-  --table-background-color: rgba(0, 94, 255, 0.091);
+  --table-background-color: rgba(169, 169, 169, 0.091);
+  --font-family: -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    Oxygen,
+    Ubuntu,
+    Cantarell,
+    "Open Sans",
+    "Helvetica Neue", sans-serif;
 }
 
 body {
-  font-family: -apple-system,
-              BlinkMacSystemFont,
-              "Segoe UI",
-              Roboto,
-              Oxygen,
-              Ubuntu,
-              Cantarell,
-              "Open Sans",
-              "Helvetica Neue", sans-serif;
-  font-size: 0.9rem;
+  font-family: var(--font-family);
+  font-size: 1rem;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 #container {
   width: 900px;
-  margin: 2rem auto;
+  margin: 1.5rem auto;
 }
 
 hr {
@@ -42,9 +43,8 @@ h2 {
   font-weight: normal;
   margin: 0;
   font-size: 1.1em;
-  color: rgb(244, 164, 28);
+  color: rgb(255, 174, 35);
 }
-
 
 h3 a:hover {
   color: var(--primary-color);
@@ -93,11 +93,45 @@ input[type="text"],
 select {
   box-sizing: border-box;
   width: 100%;
+  font-size: 1em;
+}
+
+button {
+  font-size: 1em;
+  background-color: rgb(7, 65, 255);
+  border: none;
+  color: white;
+  padding: .4rem .6rem;
+  cursor: pointer;
+  border-radius: 2px;
+  font-family: var(--font-family);
+}
+
+button:disabled {
+  background-color: gray;
+  color: rgb(165, 165, 165);
+}
+
+button:disabled:hover {
+  background-color: gray;
+  color: rgb(165, 165, 165);
+  cursor: default;
+}
+
+button:hover {
+  background-color: rgb(9, 52, 193);
+  color: white;
+}
+
+button:focus,
+button:active {
+  background-color: black;
 }
 
 table {
   width: 100%;
-  border: 1px solid rgb(217, 230, 252);
+  border: 1px solid rgb(51, 55, 255);
+  border-radius: 2px;
 }
 
 table td {
@@ -110,7 +144,7 @@ table .digits {
 
 table td,
 table th {
-  padding: 0.3rem;
+  padding: 0.6rem 0.4rem;
 }
 
 .table-header-time {
