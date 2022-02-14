@@ -32,6 +32,7 @@ import DateFilter from "./components/DateFilter";
 import Textarea from "./components/Textarea";
 
 import "./App.css";
+import ProjectNameFilter from "./components/ProjectNameFilter";
 
 let __timerInstance: NodeJS.Timeout;
 
@@ -69,6 +70,8 @@ function App({ workLogEntriesFetcher, shareableUrlsFetcher }: AppProps) {
     null
   );
   const [showFilterBar, setShowFilterBar] = useState<boolean>(false);
+  const [showProjectFilter, setShowProjectFilter] = useState<boolean>(false);
+  const [currentProject, setCurrentProject] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [isCreateShareableURLInProgress, setIsCreateShareableURLInProgress] =
@@ -211,10 +214,6 @@ function App({ workLogEntriesFetcher, shareableUrlsFetcher }: AppProps) {
     await removeIndexDbStore();
     await loadWorkLogEntries();
   };
-  const totalSeconds = workLogEntries.reduce(
-    (left, right) => left + right.seconds,
-    0
-  );
   const createShareableURL = async () => {
     const contentHash = hashWorkLogEntries(workLogEntries);
     const urlKey = generateUniqueID();
@@ -290,6 +289,16 @@ function App({ workLogEntriesFetcher, shareableUrlsFetcher }: AppProps) {
     deleteLocalShareableURL(urlKey);
     loadShareableUrls();
   };
+  let filteredLogEntries;
+  if (currentProject) {
+    filteredLogEntries = workLogEntries.filter((entry) => entry.projectName === currentProject)
+  } else {
+    filteredLogEntries = workLogEntries;
+  }
+  const totalSeconds = filteredLogEntries.reduce(
+    (left, right) => left + right.seconds,
+    0
+  );
   return (
     <div id="container">
       <h3 id="logo">
@@ -362,14 +371,30 @@ function App({ workLogEntriesFetcher, shareableUrlsFetcher }: AppProps) {
       <table>
         <thead>
           <tr>
-            <th className={"table-header-project"}>Project</th>
+            <th className={"table-header-project"}>
+              <a
+                href="#filter-project-name"
+                onClick={(event) => {
+                  event.preventDefault();
+                  setShowProjectFilter(!showProjectFilter);
+                }}
+              >
+                Project
+              </a>
+              {showProjectFilter && (
+                <ProjectNameFilter
+                  value={currentProject}
+                  onChange={(projectName) => setCurrentProject(projectName)}
+                  workLogEntries={workLogEntries}
+                />
+              )}
+            </th>
             <th className={"table-header-time"}>Duration</th>
             <th className={"table-header-date"}>
               <a
                 href="#filter-bar"
                 style={{
                   textDecoration: "none",
-                  // date filter is work in progress
                 }}
                 onClick={(event) => {
                   event.preventDefault();
@@ -394,7 +419,7 @@ function App({ workLogEntriesFetcher, shareableUrlsFetcher }: AppProps) {
               <td colSpan={4}>No data.</td>
             </tr>
           )}
-          {workLogEntries.map((entry) => (
+          {filteredLogEntries.map((entry) => (
             <tr key={entry.key}>
               <td
                 style={{
