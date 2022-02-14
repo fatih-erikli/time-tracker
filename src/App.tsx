@@ -775,7 +775,7 @@ function App({ workLogEntriesFetcher, shareableUrlsFetcher }: AppProps) {
         </button>
       </p>
       <footer>
-        Fatih Erikli, MIT Licensed, 2021.
+        Fatih Erikli, MIT Licensed, 2021-2022.
         <br />
         Source code available on{" "}
         <a
