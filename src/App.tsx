@@ -252,11 +252,15 @@ function App({ workLogEntriesFetcher, shareableUrlsFetcher }: AppProps) {
     setIsCreateShareableURLInProgress(false);
   };
   useEffect(() => {
-    const linkKey = window.location.hash.slice(1);
+    const [linkKey, projectName, ] = window.location.hash.slice(1).split("+");
     const isValidLinkKey = isValidUUIDKey(linkKey);
 
     if (isValidLinkKey) {
       setCurrentLinkKey(linkKey);
+    }
+
+    if (projectName) {
+      setCurrentProject(projectName);
     }
 
     if (loadWorkLogEntries) {
