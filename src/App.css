@@ -239,3 +239,7 @@ h3 a:visited {
     width: 90%;
   }
 }
+
+.Paid {
+  background-color:rgb(194, 245, 228);
+}

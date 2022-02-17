@@ -6,6 +6,7 @@ export type WorkLogEntry = {
   date: Array<number>;
   dateCreation: string;
   linkKey?: string;
+  isPaid: boolean;
 };
 
 export type WorkLogEntries = Array<WorkLogEntry>;

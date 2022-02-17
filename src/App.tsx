@@ -24,7 +24,7 @@ import {
   updateLocalShareableURL,
   updateRemoteShareableURL,
 } from "./services/shareable-urls";
-import { Error, ShareableURL, WorkLogEntries } from "./types";
+import { Error, ShareableURL, WorkLogEntries, WorkLogEntry } from "./types";
 import { generateUniqueID, isValidUUIDKey } from "./utils";
 
 import Time from "./components/Time";
@@ -76,6 +76,9 @@ function App({ workLogEntriesFetcher, shareableUrlsFetcher }: AppProps) {
   const [info, setInfo] = useState<string | null>(null);
   const [isCreateShareableURLInProgress, setIsCreateShareableURLInProgress] =
     useState(false);
+  const [selectedWorkEntryIds, setSelectedWorkEntryIds] = useState<string[]>(
+    []
+  );
   const loadFile: ChangeEventHandler = (event: ChangeEvent) => {
     setError(null);
     if (!event.target) {
@@ -191,6 +194,7 @@ function App({ workLogEntriesFetcher, shareableUrlsFetcher }: AppProps) {
       projectName,
       seconds,
       notes,
+      isPaid: false,
       date: [date.getFullYear(), date.getMonth(), date.getDate()],
     });
     setNotes("");
@@ -209,6 +213,30 @@ function App({ workLogEntriesFetcher, shareableUrlsFetcher }: AppProps) {
       await updateWorkLogEntry(currentWorkLogEntry, currentEditingEntry);
     }
     setCurrentEditingEntry(null);
+  };
+  const updateSelectedEntries = async (updates: Partial<WorkLogEntry>) => {
+    for (const entryKey of selectedWorkEntryIds) {
+      const workLogEntry = workLogEntries.find(
+        (entry) => entry.key === entryKey
+      );
+      if (workLogEntry) {
+        await updateWorkLogEntry(
+          {
+            ...workLogEntry,
+            ...updates,
+          },
+          entryKey
+        );
+      }
+    }
+    setWorkLogEntries(
+      workLogEntries.map((entry) =>
+        selectedWorkEntryIds.includes(entry.key)
+          ? { ...entry, ...updates }
+          : entry
+      )
+    );
+    setSelectedWorkEntryIds([]);
   };
   const resetCurrentDatabase = async () => {
     await removeIndexDbStore();
@@ -252,7 +280,7 @@ function App({ workLogEntriesFetcher, shareableUrlsFetcher }: AppProps) {
     setIsCreateShareableURLInProgress(false);
   };
   useEffect(() => {
-    const [linkKey, projectName, ] = window.location.hash.slice(1).split("+");
+    const [linkKey, projectName] = window.location.hash.slice(1).split("+");
     const isValidLinkKey = isValidUUIDKey(linkKey);
 
     if (isValidLinkKey) {
@@ -293,9 +321,11 @@ function App({ workLogEntriesFetcher, shareableUrlsFetcher }: AppProps) {
     deleteLocalShareableURL(urlKey);
     loadShareableUrls();
   };
-  let filteredLogEntries;
+  let filteredLogEntries: WorkLogEntry[];
   if (currentProject) {
-    filteredLogEntries = workLogEntries.filter((entry) => entry.projectName === currentProject)
+    filteredLogEntries = workLogEntries.filter(
+      (entry) => entry.projectName === currentProject
+    );
   } else {
     filteredLogEntries = workLogEntries;
   }
@@ -303,6 +333,12 @@ function App({ workLogEntriesFetcher, shareableUrlsFetcher }: AppProps) {
     (left, right) => left + right.seconds,
     0
   );
+  const waitingForPaymentSeconds = filteredLogEntries
+    .filter((entry) => !entry.isPaid)
+    .reduce((left, right) => left + right.seconds, 0);
+  const paidSeconds = filteredLogEntries
+    .filter((entry) => entry.isPaid)
+    .reduce((left, right) => left + right.seconds, 0);
   return (
     <div id="container">
       <h3 id="logo">
@@ -372,9 +408,39 @@ function App({ workLogEntriesFetcher, shareableUrlsFetcher }: AppProps) {
         )}
       </div>
       <h3>Work log</h3>
+      {selectedWorkEntryIds.length > 0 && (
+        <>
+          <p>Selected work entries ({selectedWorkEntryIds.length})</p>
+          <p>
+            <button onClick={() => updateSelectedEntries({ isPaid: true })}>
+              Mark as paid
+            </button>
+          </p>
+          <p>
+            <button onClick={() => updateSelectedEntries({ isPaid: false })}>
+              Mark as not paid
+            </button>
+          </p>
+        </>
+      )}
       <table>
         <thead>
           <tr>
+            <th>
+              <input
+                type={"checkbox"}
+                checked={selectedWorkEntryIds.length > 0}
+                onChange={(event) => {
+                  if ((event.target as HTMLInputElement).matches(":checked")) {
+                    setSelectedWorkEntryIds(
+                      filteredLogEntries.map((entry) => entry.key)
+                    );
+                  } else {
+                    setSelectedWorkEntryIds([]);
+                  }
+                }}
+              />
+            </th>
             <th className={"table-header-project"}>
               <a
                 href="#filter-project-name"
@@ -424,7 +490,27 @@ function App({ workLogEntriesFetcher, shareableUrlsFetcher }: AppProps) {
             </tr>
           )}
           {filteredLogEntries.map((entry) => (
-            <tr key={entry.key}>
+            <tr key={entry.key} className={entry.isPaid ? "Paid" : "NotPaid"}>
+              <td>
+                <input
+                  checked={selectedWorkEntryIds.includes(entry.key)}
+                  onChange={() => {
+                    if (selectedWorkEntryIds.includes(entry.key)) {
+                      setSelectedWorkEntryIds(
+                        selectedWorkEntryIds.filter(
+                          (entryKey) => entryKey !== entry.key
+                        )
+                      );
+                    } else {
+                      setSelectedWorkEntryIds([
+                        ...selectedWorkEntryIds,
+                        entry.key,
+                      ]);
+                    }
+                  }}
+                  type={"checkbox"}
+                />
+              </td>
               <td
                 style={{
                   verticalAlign: "top",
@@ -596,6 +682,7 @@ function App({ workLogEntriesFetcher, shareableUrlsFetcher }: AppProps) {
           {
             <>
               <tr className={"total"}>
+                <td></td>
                 <td>Total</td>
                 <td>
                   <Time seconds={totalSeconds} />
@@ -629,6 +716,7 @@ function App({ workLogEntriesFetcher, shareableUrlsFetcher }: AppProps) {
               </tr>
               <tr className={"total-payment"}>
                 <td></td>
+                <td></td>
                 <td>
                   Rate per hour
                   <div
@@ -658,9 +746,14 @@ function App({ workLogEntriesFetcher, shareableUrlsFetcher }: AppProps) {
                   </div>
                 </td>
                 <td colSpan={1} style={{}}>
-                  Payment in total
+                  Paid amount{' '}
+                  {Number((paidSeconds / 60 / 60) * ratePerHour).toFixed(2)}
+                  {{ USD: "$", EUR: "€", TL: "TL" }[currency as string]} <br />
+                  Waiting for payment in total
                   <div style={{ fontSize: "2rem" }}>
-                    {Number((totalSeconds / 60 / 60) * ratePerHour).toFixed(2)}
+                    {Number(
+                      (waitingForPaymentSeconds / 60 / 60) * ratePerHour
+                    ).toFixed(2)}
                     {{ USD: "$", EUR: "€", TL: "TL" }[currency as string]}
                   </div>
                 </td>
