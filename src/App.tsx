@@ -24,7 +24,13 @@ import {
   updateLocalShareableURL,
   updateRemoteShareableURL,
 } from "./services/shareable-urls";
-import { Error, ShareableURL, WorkLogEntries, WorkLogEntry } from "./types";
+import {
+  Error,
+  PaidStatusQueryParameter,
+  ShareableURL,
+  WorkLogEntries,
+  WorkLogEntry,
+} from "./types";
 import { generateUniqueID, isValidUUIDKey } from "./utils";
 
 import Time from "./components/Time";
@@ -72,6 +78,9 @@ function App({ workLogEntriesFetcher, shareableUrlsFetcher }: AppProps) {
   const [showFilterBar, setShowFilterBar] = useState<boolean>(false);
   const [showProjectFilter, setShowProjectFilter] = useState<boolean>(false);
   const [currentProject, setCurrentProject] = useState<string | null>(null);
+  const [filterByPaidStatus, setFilterByPaidStatus] = useState<boolean | null>(
+    null
+  );
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [isCreateShareableURLInProgress, setIsCreateShareableURLInProgress] =
@@ -280,7 +289,9 @@ function App({ workLogEntriesFetcher, shareableUrlsFetcher }: AppProps) {
     setIsCreateShareableURLInProgress(false);
   };
   useEffect(() => {
-    const [linkKey, projectName] = window.location.hash.slice(1).split("+");
+    const [linkKey, projectName, paidStatus] = window.location.hash
+      .slice(1)
+      .split("+");
     const isValidLinkKey = isValidUUIDKey(linkKey);
 
     if (isValidLinkKey) {
@@ -288,7 +299,16 @@ function App({ workLogEntriesFetcher, shareableUrlsFetcher }: AppProps) {
     }
 
     if (projectName) {
-      setCurrentProject(projectName);
+      setCurrentProject(decodeURIComponent(projectName));
+    }
+
+    if (
+      paidStatus === PaidStatusQueryParameter.Paid ||
+      paidStatus === PaidStatusQueryParameter.NotPaid
+    ) {
+      setFilterByPaidStatus(paidStatus === PaidStatusQueryParameter.Paid);
+    } else {
+      setFilterByPaidStatus(null);
     }
 
     if (loadWorkLogEntries) {
@@ -328,6 +348,11 @@ function App({ workLogEntriesFetcher, shareableUrlsFetcher }: AppProps) {
     );
   } else {
     filteredLogEntries = workLogEntries;
+  }
+  if (filterByPaidStatus !== null) {
+    filteredLogEntries = filteredLogEntries.filter(
+      (entry) => entry.isPaid === filterByPaidStatus
+    );
   }
   const totalSeconds = filteredLogEntries.reduce(
     (left, right) => left + right.seconds,
@@ -746,7 +771,7 @@ function App({ workLogEntriesFetcher, shareableUrlsFetcher }: AppProps) {
                   </div>
                 </td>
                 <td colSpan={1} style={{}}>
-                  Paid amount{' '}
+                  Paid amount{" "}
                   {Number((paidSeconds / 60 / 60) * ratePerHour).toFixed(2)}
                   {{ USD: "$", EUR: "€", TL: "TL" }[currency as string]} <br />
                   Waiting for payment in total

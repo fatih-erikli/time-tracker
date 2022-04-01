@@ -25,3 +25,8 @@ export type Error = {
   error: string;
   isCreated: boolean;
 };
+
+export enum PaidStatusQueryParameter {
+  Paid = "Paid",
+  NotPaid = "NotPaid"
+};
