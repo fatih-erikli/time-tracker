@@ -72,6 +72,10 @@ p {
   font-size: 2rem;
 }
 
+.clickable {
+  cursor: pointer;
+}
+
 label {
   display: block;
   line-height: 1.9rem;
@@ -243,3 +247,11 @@ h3 a:visited {
 .Paid {
   background-color:rgb(194, 245, 228);
 }
+
+.actions-buttons {
+  display: flex;
+  gap: 0.3rem;
+  align-items: center;
+  align-self: flex-end;
+}
+
