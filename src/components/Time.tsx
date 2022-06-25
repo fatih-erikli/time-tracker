@@ -3,15 +3,21 @@ import { KeyboardEventHandler, useState } from "react";
 type TimeProps = {
   seconds: number;
   onChange?: (seconds: number) => void;
-  onStartEdited?: () => void;
+  onStartEdit?: () => void;
+  onEndEdit?: () => void;
 };
 
-const Time = ({ seconds, onChange, onStartEdited }: TimeProps) => {
+const Time = ({ seconds, onChange, onStartEdit, onEndEdit }: TimeProps) => {
   const [editedPart, setEditedPart] = useState<"hours" | "minutes" | "seconds" | null>(null);
   const hoursInDigits = Math.floor(seconds / 60 / 60);
   const minutesInDigits = Math.floor(seconds / 60) % 60;
   const secondsInDigits = seconds % 60;
-  const onKeyPress: KeyboardEventHandler = (event) => event.code === "Enter" && setEditedPart(null);
+  const onKeyPress: KeyboardEventHandler = (event) => {
+    if (event.code === "Enter") {
+      setEditedPart(null);
+      onEndEdit && onEndEdit();
+    }
+  };
   return (
     <div className={"time"}>
       <div
@@ -19,7 +25,7 @@ const Time = ({ seconds, onChange, onStartEdited }: TimeProps) => {
         onClick={(event) => {
           !(event.target as HTMLElement).matches("input") &&
             setEditedPart((editedPart) => (editedPart === "hours" ? null : "hours"));
-          onStartEdited && onStartEdited();
+          onStartEdit && onStartEdit();
         }}
       >
         <div className={"digits"}>
@@ -43,7 +49,7 @@ const Time = ({ seconds, onChange, onStartEdited }: TimeProps) => {
         onClick={(event) => {
           !(event.target as HTMLElement).matches("input") &&
             setEditedPart((editedPart) => (editedPart === "minutes" ? null : "minutes"));
-          onStartEdited && onStartEdited();
+          onStartEdit && onStartEdit();
         }}
       >
         <div className={"digits"}>
@@ -67,7 +73,7 @@ const Time = ({ seconds, onChange, onStartEdited }: TimeProps) => {
         onClick={(event) => {
           !(event.target as HTMLElement).matches("input") &&
             setEditedPart((editedPart) => (editedPart === "seconds" ? null : "seconds"));
-          onStartEdited && onStartEdited();
+          onStartEdit && onStartEdit();
         }}
       >
         <div className={"digits"}>

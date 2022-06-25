@@ -71,14 +71,14 @@ function App({ workLogEntriesFetcher, shareableUrlsFetcher }: AppProps) {
       if (!event.target) {
         return;
       }
-      let dump;
+      let jsonFile;
       try {
-        dump = JSON.parse(event.target.result as any);
+        jsonFile = JSON.parse(event.target.result as any);
       } catch (e) {
         setError("Provide a valid JSON file.");
         return;
       }
-      const { entries } = dump;
+      const { entries } = jsonFile;
       for (const entry of entries) {
         await createWorkLogEntry(entry, entry.key);
       }
@@ -507,7 +507,10 @@ function App({ workLogEntriesFetcher, shareableUrlsFetcher }: AppProps) {
               >
                 <Time
                   seconds={entry.seconds}
-                  onStartEdited={() => setCurrentEditingEntry(entry.key)}
+                  onStartEdit={() => setCurrentEditingEntry(entry.key)}
+                  onEndEdit={() => {
+                    processLogEntryEdit()
+                  }}
                   onChange={(seconds) =>
                     setWorkLogEntries(
                       workLogEntries.map((entry) =>
